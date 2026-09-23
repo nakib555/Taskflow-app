@@ -8,20 +8,21 @@ function App() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchTasks = async () => {
-    try {
-      const response = await fetch(API_URL);
-      const data = await response.json();
-      setTasks(data);
-    } catch (error) {
-      console.log(error);
-    }
-
-    setLoading(false);
-  };
-
   useEffect(() => {
-    fetchTasks();
+    const loadTasks = async () => {
+      try {
+        const response = await fetch(API_URL);
+        const data = await response.json();
+
+        setTasks(data);
+      } catch (error) {
+        console.log(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTasks();
   }, []);
 
   const addTask = async (title) => {
@@ -37,7 +38,7 @@ function App() {
       const newTask = await response.json();
 
       if (response.ok) {
-        setTasks([newTask, ...tasks]);
+        setTasks((currentTasks) => [newTask, ...currentTasks]);
       }
     } catch (error) {
       console.log(error);
@@ -53,8 +54,32 @@ function App() {
       const updatedTask = await response.json();
 
       if (response.ok) {
-        setTasks(
-          tasks.map((task) =>
+        setTasks((currentTasks) =>
+          currentTasks.map((task) =>
+            (task._id || task.id) === id ? updatedTask : task
+          )
+        );
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const editTask = async (id, title) => {
+    try {
+      const response = await fetch(`${API_URL}/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ title }),
+      });
+
+      const updatedTask = await response.json();
+
+      if (response.ok) {
+        setTasks((currentTasks) =>
+          currentTasks.map((task) =>
             (task._id || task.id) === id ? updatedTask : task
           )
         );
@@ -71,8 +96,10 @@ function App() {
       });
 
       if (response.ok) {
-        setTasks(
-          tasks.filter((task) => (task._id || task.id) !== id)
+        setTasks((currentTasks) =>
+          currentTasks.filter(
+            (task) => (task._id || task.id) !== id
+          )
         );
       }
     } catch (error) {
@@ -100,6 +127,7 @@ function App() {
             tasks={tasks}
             onToggleTask={toggleTask}
             onDeleteTask={deleteTask}
+            onEditTask={editTask}
           />
         )}
       </div>

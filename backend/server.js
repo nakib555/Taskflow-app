@@ -4,85 +4,131 @@ import cors from 'cors';
 import Task from './models/Task.js';
 
 const app = express();
-const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/';
+const PORT = 5000;
 
-// Middlewares
 app.use(cors());
 app.use(express.json());
 
-// Database Connection
 mongoose
-  .connect(MONGO_URI)
-  .then(() => console.log('MongoDB Connected Successfully!'))
-  .catch((err) => console.error('MongoDB Connection Error:', err.message));
+  .connect('mongodb://localhost:27017/taskflow')
+  .then(() => console.log('MongoDB Connected'))
+  .catch((err) => console.log(err));
 
-// Health / Welcome route
-app.get('/', (_req, res) => {
-  res.json({ message: 'TaskFlow API is running!' });
+app.get('/', (req, res) => {
+  res.json({ message: 'TaskFlow API is running' });
 });
 
-// GET /tasks - Fetch all tasks sorted by creation date (newest first)
-app.get('/tasks', async (_req, res) => {
+// GET - Get all tasks
+app.get('/tasks', async (req, res) => {
   try {
     const tasks = await Task.find().sort({ createdAt: -1 });
-    res.status(200).json(tasks);
+    res.json(tasks);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to retrieve tasks' });
+    res.status(500).json({ error: 'Failed to get tasks' });
   }
 });
 
-// POST /tasks - Create a new task
+// POST - Add task
 app.post('/tasks', async (req, res) => {
   try {
     const { title } = req.body;
+
     if (!title || title.trim() === '') {
-      return res.status(400).json({ error: 'Task title cannot be empty' });
+      return res.status(400).json({
+        error: 'Title is required',
+      });
     }
-    const newTask = await Task.create({ title: title.trim() });
-    res.status(201).json(newTask);
+
+    const task = await Task.create({
+      title: title.trim(),
+    });
+
+    res.status(201).json(task);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create task' });
+    res.status(500).json({
+      error: 'Failed to add task',
+    });
   }
 });
 
-// PUT /tasks/:id - Toggle task status between 'pending' and 'completed'
+// PUT - Complete / Pending
 app.put('/tasks/:id', async (req, res) => {
   try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ error: 'Invalid task ID format' });
-    }
-    const task = await Task.findById(id);
+    const task = await Task.findById(req.params.id);
+
     if (!task) {
-      return res.status(404).json({ error: 'Task not found' });
+      return res.status(404).json({
+        error: 'Task not found',
+      });
     }
-    task.status = task.status === 'completed' ? 'pending' : 'completed';
+
+    task.status =
+      task.status === 'completed'
+        ? 'pending'
+        : 'completed';
+
     await task.save();
-    res.status(200).json(task);
+
+    res.json(task);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update task status' });
+    res.status(500).json({
+      error: 'Failed to update task',
+    });
   }
 });
 
-// DELETE /tasks/:id - Remove task by ID
+// PATCH - Edit task
+app.patch('/tasks/:id', async (req, res) => {
+  try {
+    const { title } = req.body;
+
+    if (!title || title.trim() === '') {
+      return res.status(400).json({
+        error: 'Title is required',
+      });
+    }
+
+    const task = await Task.findByIdAndUpdate(
+      req.params.id,
+      { title: title.trim() },
+      { new: true }
+    );
+
+    if (!task) {
+      return res.status(404).json({
+        error: 'Task not found',
+      });
+    }
+
+    res.json(task);
+  } catch (error) {
+    res.status(500).json({
+      error: 'Failed to edit task',
+    });
+  }
+});
+
+// DELETE - Delete task
 app.delete('/tasks/:id', async (req, res) => {
   try {
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ error: 'Invalid task ID format' });
+    const task = await Task.findByIdAndDelete(req.params.id);
+
+    if (!task) {
+      return res.status(404).json({
+        error: 'Task not found',
+      });
     }
-    const deletedTask = await Task.findByIdAndDelete(id);
-    if (!deletedTask) {
-      return res.status(404).json({ error: 'Task not found' });
-    }
-    res.status(200).json({ message: 'Task deleted successfully' });
+
+    res.json({
+      message: 'Task deleted successfully',
+    });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to delete task' });
+    res.status(500).json({
+      error: 'Failed to delete task',
+    });
   }
 });
 
-// Start Server
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });

@@ -1,35 +1,28 @@
 import React, { useState } from 'react';
 import TaskItem from './TaskItem';
 
-function TaskList({ tasks, onToggleTask, onDeleteTask }) {
+function TaskList({
+  tasks,
+  onToggleTask,
+  onDeleteTask,
+  onEditTask,
+}) {
   const [filter, setFilter] = useState('all');
 
   const filteredTasks = tasks.filter((task) => {
-    if (filter === 'completed') {
-      return task.status === 'completed';
-    }
-
-    if (filter === 'pending') {
-      return task.status === 'pending';
-    }
-
+    if (filter === 'completed') return task.status === 'completed';
+    if (filter === 'pending') return task.status === 'pending';
     return true;
   });
 
   return (
     <div>
       <div className="mb-4">
-        <button
-          onClick={() => setFilter('all')}
-          className="mr-2"
-        >
+        <button onClick={() => setFilter('all')} className="mr-2">
           All
         </button>
 
-        <button
-          onClick={() => setFilter('pending')}
-          className="mr-2"
-        >
+        <button onClick={() => setFilter('pending')} className="mr-2">
           Pending
         </button>
 
@@ -38,9 +31,7 @@ function TaskList({ tasks, onToggleTask, onDeleteTask }) {
         </button>
       </div>
 
-      <p className="mb-3">
-        Total tasks: {tasks.length}
-      </p>
+      <p className="mb-3">Total tasks: {tasks.length}</p>
 
       {filteredTasks.length === 0 ? (
         <p>No tasks found.</p>
@@ -52,6 +43,7 @@ function TaskList({ tasks, onToggleTask, onDeleteTask }) {
               task={task}
               onToggleTask={onToggleTask}
               onDeleteTask={onDeleteTask}
+              onEditTask={onEditTask}
             />
           ))}
         </ul>
