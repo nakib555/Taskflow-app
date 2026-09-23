@@ -20,6 +20,12 @@ function TaskItem({
     setIsEditing(false);
   };
 
+  const formatDate = (date) => {
+    if (!date) return 'N/A';
+
+    return new Date(date).toLocaleString();
+  };
+
   return (
     <li className="border-b border-gray-300 py-3 flex justify-between items-center">
       <div className="flex items-center gap-2 flex-1">
@@ -29,24 +35,36 @@ function TaskItem({
           onChange={() => onToggleTask(taskId)}
         />
 
-        {isEditing ? (
-          <input
-            type="text"
-            value={editTitle}
-            onChange={(e) => setEditTitle(e.target.value)}
-            className="border border-gray-400 p-1 flex-1"
-          />
-        ) : (
-          <span
-            className={
-              task.status === 'completed'
-                ? 'line-through text-gray-400'
-                : ''
-            }
-          >
-            {task.title}
-          </span>
-        )}
+        <div className="flex-1">
+          {isEditing ? (
+            <input
+              type="text"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="border border-gray-400 p-1 w-full"
+            />
+          ) : (
+            <span
+              className={
+                task.status === 'completed'
+                  ? 'line-through text-gray-400'
+                  : ''
+              }
+            >
+              {task.title}
+            </span>
+          )}
+
+          <div className="text-xs text-gray-500 mt-1">
+            <p>
+              Created: {formatDate(task.createdAt)}
+            </p>
+
+            <p>
+              Updated: {formatDate(task.updatedAt)}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="flex gap-2 ml-4">
