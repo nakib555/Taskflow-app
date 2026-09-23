@@ -4,57 +4,86 @@ import cors from 'cors';
 import Task from './models/Task.js';
 
 const app = express();
-const PORT = 5000;
 
+const PORT = process.env.PORT || 5000;
+const MONGO_URI =
+  process.env.MONGO_URI || 'mongodb://localhost:27017/';
+
+// Middleware
 app.use(cors());
 app.use(express.json());
 
+// MongoDB
 mongoose
-  .connect('mongodb://localhost:27017/taskflow')
-  .then(() => console.log('MongoDB Connected'))
-  .catch((err) => console.log(err));
+  .connect(MONGO_URI)
+  .then(() => {
+    console.log('MongoDB Connected Successfully!');
+  })
+  .catch((error) => {
+    console.error('MongoDB Connection Error:', error.message);
+  });
 
-app.get('/', (req, res) => {
-  res.json({ message: 'TaskFlow API is running' });
+// Test route
+app.get('/', (_req, res) => {
+  res.json({
+    message: 'TaskFlow API is running!',
+  });
 });
 
 // GET - Get all tasks
-app.get('/tasks', async (req, res) => {
+app.get('/tasks', async (_req, res) => {
   try {
-    const tasks = await Task.find().sort({ createdAt: -1 });
-    res.json(tasks);
+    const tasks = await Task.find().sort({
+      createdAt: -1,
+    });
+
+    res.status(200).json(tasks);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to get tasks' });
+    console.error(error);
+
+    res.status(500).json({
+      error: 'Failed to retrieve tasks',
+    });
   }
 });
 
-// POST - Add task
+// POST - Create task
 app.post('/tasks', async (req, res) => {
   try {
     const { title } = req.body;
 
     if (!title || title.trim() === '') {
       return res.status(400).json({
-        error: 'Title is required',
+        error: 'Task title cannot be empty',
       });
     }
 
-    const task = await Task.create({
+    const newTask = await Task.create({
       title: title.trim(),
     });
 
-    res.status(201).json(task);
+    res.status(201).json(newTask);
   } catch (error) {
+    console.error(error);
+
     res.status(500).json({
-      error: 'Failed to add task',
+      error: 'Failed to create task',
     });
   }
 });
 
-// PUT - Complete / Pending
+// PUT - Toggle task status
 app.put('/tasks/:id', async (req, res) => {
   try {
-    const task = await Task.findById(req.params.id);
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        error: 'Invalid task ID',
+      });
+    }
+
+    const task = await Task.findById(id);
 
     if (!task) {
       return res.status(404).json({
@@ -69,39 +98,55 @@ app.put('/tasks/:id', async (req, res) => {
 
     await task.save();
 
-    res.json(task);
+    res.status(200).json(task);
   } catch (error) {
+    console.error(error);
+
     res.status(500).json({
       error: 'Failed to update task',
     });
   }
 });
 
-// PATCH - Edit task
+// PATCH - Edit task title
 app.patch('/tasks/:id', async (req, res) => {
   try {
+    const { id } = req.params;
     const { title } = req.body;
 
-    if (!title || title.trim() === '') {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
-        error: 'Title is required',
+        error: 'Invalid task ID',
       });
     }
 
-    const task = await Task.findByIdAndUpdate(
-      req.params.id,
-      { title: title.trim() },
-      { new: true }
+    if (!title || title.trim() === '') {
+      return res.status(400).json({
+        error: 'Task title cannot be empty',
+      });
+    }
+
+    const updatedTask = await Task.findByIdAndUpdate(
+      id,
+      {
+        title: title.trim(),
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
     );
 
-    if (!task) {
+    if (!updatedTask) {
       return res.status(404).json({
         error: 'Task not found',
       });
     }
 
-    res.json(task);
+    res.status(200).json(updatedTask);
   } catch (error) {
+    console.error(error);
+
     res.status(500).json({
       error: 'Failed to edit task',
     });
@@ -111,24 +156,36 @@ app.patch('/tasks/:id', async (req, res) => {
 // DELETE - Delete task
 app.delete('/tasks/:id', async (req, res) => {
   try {
-    const task = await Task.findByIdAndDelete(req.params.id);
+    const { id } = req.params;
 
-    if (!task) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        error: 'Invalid task ID',
+      });
+    }
+
+    const deletedTask =
+      await Task.findByIdAndDelete(id);
+
+    if (!deletedTask) {
       return res.status(404).json({
         error: 'Task not found',
       });
     }
 
-    res.json({
+    res.status(200).json({
       message: 'Task deleted successfully',
     });
   } catch (error) {
+    console.error(error);
+
     res.status(500).json({
       error: 'Failed to delete task',
     });
   }
 });
 
+// Start server
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
